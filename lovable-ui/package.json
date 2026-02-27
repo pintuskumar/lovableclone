@@ -6,22 +6,32 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:e2e:smoke": "node scripts/e2e-smoke.mjs",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
-    "@anthropic-ai/claude-code": "^1.0.39",
     "@daytonaio/sdk": "^0.21.5",
+    "@monaco-editor/react": "^4.6.0",
+    "@prisma/client": "^5.22.0",
+    "bcryptjs": "^2.4.3",
     "dotenv": "^17.0.1",
+    "jsonwebtoken": "^9.0.2",
     "next": "14.2.3",
+    "next-pwa": "^5.6.0",
+    "openai": "^4.68.0",
     "react": "^18",
     "react-dom": "^18"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "autoprefixer": "^10.0.1",
     "postcss": "^8",
+    "prisma": "^5.22.0",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
   }

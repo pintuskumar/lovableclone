@@ -2,8 +2,8 @@ import { Daytona } from "@daytonaio/sdk";
 import * as dotenv from "dotenv";
 import * as path from "path";
 
-// Load environment variables
-dotenv.config({ path: path.join(__dirname, "../../.env") });
+// Load environment variables from the current working directory
+dotenv.config({ path: path.join(process.cwd(), ".env") });
 
 async function testPreviewUrl() {
   console.log("Testing Daytona Preview URL functionality...\n");

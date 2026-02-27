@@ -1,0 +1,140 @@
+import OpenAI from "openai";
+
+const DEFAULT_AI_GATEWAY_MODEL = "anthropic/claude-sonnet-4.5";
+const AI_GATEWAY_MODEL =
+    process.env.AI_GATEWAY_MODEL || DEFAULT_AI_GATEWAY_MODEL;
+
+// OpenAI SDK configured for the Vercel AI Gateway (OpenAI-compatible API)
+const aiClient = new OpenAI({
+    apiKey: process.env.VERCEL_AI_GATEWAY_API_KEY,
+    baseURL: "https://ai-gateway.vercel.sh/v1",
+});
+
+export interface PerplexityMessage {
+    role: "system" | "user" | "assistant";
+    content: string;
+}
+export type AIMessage = PerplexityMessage;
+
+export interface PerplexityResponse {
+    id: string;
+    model: string;
+    choices: {
+        index: number;
+        message: {
+            role: string;
+            content: string;
+        };
+        finish_reason: string;
+    }[];
+    usage: {
+        prompt_tokens: number;
+        completion_tokens: number;
+        total_tokens: number;
+    };
+    citations?: string[];
+}
+export type AIResponse = PerplexityResponse;
+
+export interface CodeGenerationResult {
+    success: boolean;
+    content: string;
+    citations?: string[];
+    error?: string;
+}
+
+export async function generateCodeWithPerplexity(
+    prompt: string
+): Promise<CodeGenerationResult> {
+    try {
+        const messages: PerplexityMessage[] = [
+            {
+                role: "system",
+                content: `You are an expert web developer. When asked to create websites or web applications, provide complete, working code. 
+        
+Important requirements:
+- Generate complete, production-ready code
+- Include all necessary imports and dependencies
+- Use modern best practices (TypeScript, React, Next.js, Tailwind CSS)
+- Make the design modern and responsive
+- Include proper error handling`,
+            },
+            {
+                role: "user",
+                content: prompt,
+            },
+        ];
+
+        const response = await aiClient.chat.completions.create({
+            model: AI_GATEWAY_MODEL,
+            messages: messages,
+            temperature: 0.2,
+            max_tokens: 4096,
+        });
+
+        const content = response.choices[0]?.message?.content || "";
+        const citations = (response as any).citations || [];
+
+        return {
+            success: true,
+            content: content,
+            citations: citations,
+        };
+    } catch (error: any) {
+        console.error("Error generating code via Vercel AI Gateway:", error);
+        return {
+            success: false,
+            content: "",
+            error: error.message,
+        };
+    }
+}
+
+export async function* streamGenerateCodeWithPerplexity(
+    prompt: string
+): AsyncGenerator<{ type: string; content?: string; error?: string }> {
+    try {
+        const messages: PerplexityMessage[] = [
+            {
+                role: "system",
+                content: `You are an expert web developer. When asked to create websites or web applications, provide complete, working code.
+        
+Important requirements:
+- Generate complete, production-ready code
+- Include all necessary imports and dependencies
+- Use modern best practices (TypeScript, React, Next.js, Tailwind CSS)
+- Make the design modern and responsive
+- Include proper error handling`,
+            },
+            {
+                role: "user",
+                content: prompt,
+            },
+        ];
+
+        const stream = await aiClient.chat.completions.create({
+            model: AI_GATEWAY_MODEL,
+            messages: messages,
+            temperature: 0.2,
+            max_tokens: 4096,
+            stream: true,
+        });
+
+        for await (const chunk of stream) {
+            const content = chunk.choices[0]?.delta?.content;
+            if (content) {
+                yield { type: "text", content };
+            }
+        }
+
+        yield { type: "complete" };
+    } catch (error: any) {
+        console.error("Error streaming from Vercel AI Gateway:", error);
+        yield { type: "error", error: error.message };
+    }
+}
+
+export const generateCode = generateCodeWithPerplexity;
+export const streamGenerateCode = streamGenerateCodeWithPerplexity;
+
+export { aiClient, aiClient as perplexity };

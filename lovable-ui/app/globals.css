@@ -3,13 +3,323 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 255, 255, 255;
-  --background-rgb: 0, 0, 0;
+  --foreground-rgb: 242, 243, 247;
+  --background-rgb: 5, 5, 8;
+  --surface-1: rgba(17, 17, 22, 0.9);
+  --surface-2: rgba(24, 24, 31, 0.9);
+  --surface-3: rgba(34, 34, 44, 0.9);
+  --border-soft: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
+  --text-muted: rgba(255, 255, 255, 0.6);
+  --ring-accent: rgba(96, 165, 250, 0.45);
+}
+
+html {
+  color-scheme: dark;
+  scroll-behavior: smooth;
 }
 
 body {
   color: rgb(var(--foreground-rgb));
-  background: rgb(var(--background-rgb));
+  background:
+    radial-gradient(circle at 10% 10%, rgba(249, 115, 22, 0.16), transparent 42%),
+    radial-gradient(circle at 88% 18%, rgba(59, 130, 246, 0.16), transparent 45%),
+    radial-gradient(circle at 50% 100%, rgba(236, 72, 153, 0.12), transparent 55%),
+    rgb(var(--background-rgb));
+  min-height: 100vh;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: rgba(96, 165, 250, 0.28);
+  color: #fff;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--ring-accent);
+  outline-offset: 2px;
+}
+
+* {
+  scrollbar-color: rgba(255, 255, 255, 0.18) rgba(255, 255, 255, 0.05);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.24);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+@layer components {
+  .glass-panel {
+    background: linear-gradient(
+      180deg,
+      rgba(18, 18, 24, 0.78),
+      rgba(10, 10, 14, 0.9)
+    );
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    backdrop-filter: blur(12px);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.04) inset,
+      0 14px 40px rgba(0, 0, 0, 0.35),
+      0 0 0 1px rgba(255, 255, 255, 0.02);
+    position: relative;
+    transition:
+      border-color 180ms ease,
+      box-shadow 180ms ease,
+      transform 180ms ease,
+      background-color 180ms ease;
+  }
+
+  .glass-panel:hover {
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.05) inset,
+      0 18px 44px rgba(0, 0, 0, 0.42),
+      0 0 0 1px rgba(255, 255, 255, 0.03);
+  }
+
+  .glass-panel::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 8% 0%, rgba(255, 255, 255, 0.08), transparent 38%),
+      radial-gradient(circle at 92% 0%, rgba(255, 255, 255, 0.05), transparent 38%);
+    opacity: 0.8;
+  }
+
+  .ui-card {
+    background: var(--surface-1);
+    border: 1px solid var(--border-soft);
+    border-radius: 16px;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.03) inset,
+      0 12px 28px rgba(0, 0, 0, 0.22);
+    transition:
+      border-color 180ms ease,
+      box-shadow 180ms ease,
+      transform 180ms ease,
+      background-color 180ms ease;
+  }
+
+  .ui-card-hover:hover {
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.04) inset,
+      0 14px 34px rgba(0, 0, 0, 0.28);
+    transform: translateY(-1px);
+  }
+
+  .ui-ring-frame {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.02) inset,
+      0 10px 30px rgba(0, 0, 0, 0.25);
+    transition: border-color 180ms ease, box-shadow 180ms ease;
+  }
+
+  .ui-ring-frame:hover {
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+      0 14px 34px rgba(0, 0, 0, 0.3);
+  }
+
+  .ui-pill {
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset;
+  }
+
+  .ui-chip {
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
+    color: rgba(255, 255, 255, 0.78);
+    transition:
+      background-color 160ms ease,
+      border-color 160ms ease,
+      color 160ms ease,
+      transform 160ms ease,
+      box-shadow 160ms ease;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.02) inset;
+  }
+
+  .ui-chip:hover {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.14);
+    color: #fff;
+    transform: translateY(-1px);
+  }
+
+  .ui-btn {
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.9);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.03) inset,
+      0 8px 20px rgba(0, 0, 0, 0.14);
+    transition:
+      background-color 160ms ease,
+      border-color 160ms ease,
+      color 160ms ease,
+      box-shadow 160ms ease,
+      transform 160ms ease;
+  }
+
+  .ui-btn:hover {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.16);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.04) inset,
+      0 10px 24px rgba(0, 0, 0, 0.2);
+    transform: translateY(-1px);
+  }
+
+  .ui-btn:active {
+    transform: translateY(0);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.03) inset,
+      0 6px 16px rgba(0, 0, 0, 0.14);
+  }
+
+  .ui-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .ui-btn-primary {
+    border-color: rgba(255, 255, 255, 0.2);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(235, 235, 235, 0.98));
+    color: #060606;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.5) inset,
+      0 12px 28px rgba(0, 0, 0, 0.28);
+  }
+
+  .ui-btn-primary:hover {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 1), rgba(242, 242, 242, 1));
+    border-color: rgba(255, 255, 255, 0.3);
+    color: #050505;
+  }
+
+  .ui-btn-ghost {
+    background: rgba(255, 255, 255, 0.02);
+    color: rgba(255, 255, 255, 0.75);
+  }
+
+  .ui-btn-ghost:hover {
+    color: #fff;
+  }
+
+  .ui-btn-danger {
+    border-color: rgba(248, 113, 113, 0.26);
+    background: rgba(127, 29, 29, 0.2);
+    color: rgb(252, 165, 165);
+  }
+
+  .ui-btn-danger:hover {
+    border-color: rgba(248, 113, 113, 0.38);
+    background: rgba(153, 27, 27, 0.26);
+    color: rgb(254, 202, 202);
+  }
+
+  .ui-btn-warn {
+    border-color: rgba(250, 204, 21, 0.24);
+    background: rgba(113, 63, 18, 0.16);
+    color: rgb(253, 224, 71);
+  }
+
+  .ui-btn-warn:hover {
+    border-color: rgba(250, 204, 21, 0.34);
+    background: rgba(133, 77, 14, 0.22);
+    color: rgb(254, 240, 138);
+  }
+
+  .ui-btn-accent {
+    border-color: rgba(96, 165, 250, 0.24);
+    background: rgba(30, 58, 138, 0.18);
+    color: rgb(147, 197, 253);
+  }
+
+  .ui-btn-accent:hover {
+    border-color: rgba(96, 165, 250, 0.34);
+    background: rgba(30, 64, 175, 0.22);
+    color: rgb(191, 219, 254);
+  }
+
+  .ui-segment {
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.65);
+    transition:
+      background-color 160ms ease,
+      color 160ms ease,
+      border-color 160ms ease,
+      box-shadow 160ms ease;
+  }
+
+  .ui-segment:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .ui-segment-active {
+    background: rgba(255, 255, 255, 0.09);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset;
+  }
+
+  .ui-divider-top {
+    box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.04) inset;
+  }
+
+  .ui-divider-bottom {
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:focus-within {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Custom scrollbar for textarea */

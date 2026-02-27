@@ -10,7 +10,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@anthropic-ai/claude-code": "^1.0.39",
+    "openai": "^4.68.0",
     "@types/node": "^24.0.10",
     "tsx": "^4.20.3",
     "typescript": "^5.8.3"

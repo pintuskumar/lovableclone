@@ -1,9 +1,9 @@
 import { Daytona } from "@daytonaio/sdk";
 import * as dotenv from "dotenv";
-import * as path from "path";
+import path from "path";
 
-// Load environment variables
-dotenv.config({ path: path.join(__dirname, "../../.env") });
+// Load environment variables from the current working directory
+dotenv.config({ path: path.join(process.cwd(), ".env") });
 
 async function getPreviewUrl(sandboxId: string, port: number = 3000) {
   if (!process.env.DAYTONA_API_KEY) {
@@ -19,23 +19,23 @@ async function getPreviewUrl(sandboxId: string, port: number = 3000) {
     // Get sandbox
     const sandboxes = await daytona.list();
     const sandbox = sandboxes.find((s: any) => s.id === sandboxId);
-    
+
     if (!sandbox) {
       throw new Error(`Sandbox ${sandboxId} not found`);
     }
 
-    console.log(`✓ Found sandbox: ${sandboxId}`);
+    console.log(`Found sandbox: ${sandboxId}`);
 
     // Get preview URL
     const preview = await sandbox.getPreviewLink(port);
-    
-    console.log("\n🌐 Preview URL:");
+
+    console.log("\nPreview URL:");
     console.log(preview.url);
-    
+
     if (preview.token) {
-      console.log(`\n🔑 Access Token: ${preview.token}`);
+      console.log(`\nAccess Token: ${preview.token}`);
     }
-    
+
     return preview.url;
   } catch (error: any) {
     console.error("Failed to get preview URL:", error.message);
@@ -46,11 +46,13 @@ async function getPreviewUrl(sandboxId: string, port: number = 3000) {
 // Main execution
 async function main() {
   const sandboxId = process.argv[2];
-  const port = process.argv[3] ? parseInt(process.argv[3]) : 3000;
-  
+  const port = process.argv[3] ? parseInt(process.argv[3], 10) : 3000;
+
   if (!sandboxId) {
     console.error("Usage: npx tsx scripts/get-preview-url.ts <sandbox-id> [port]");
-    console.error("Example: npx tsx scripts/get-preview-url.ts 7a517a82-942c-486b-8a62-6357773eb3ea 3000");
+    console.error(
+      "Example: npx tsx scripts/get-preview-url.ts 7a517a82-942c-486b-8a62-6357773eb3ea 3000"
+    );
     process.exit(1);
   }
 
