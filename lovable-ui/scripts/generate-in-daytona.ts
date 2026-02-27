@@ -55,11 +55,12 @@ async function generateWebsiteInDaytona(
   console.log("🚀 Starting website generation in Daytona sandbox...\n");
 
   const daytonaApiKey = process.env.DAYTONA_API_KEY;
-  const gatewayApiKey = process.env.VERCEL_AI_GATEWAY_API_KEY;
+  const gatewayApiKey =
+    process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_AI_GATEWAY_API_KEY;
 
   if (!daytonaApiKey || !gatewayApiKey) {
     console.error(
-      "ERROR: DAYTONA_API_KEY and VERCEL_AI_GATEWAY_API_KEY must be set",
+      "ERROR: DAYTONA_API_KEY and AI_GATEWAY_API_KEY or VERCEL_AI_GATEWAY_API_KEY must be set",
     );
     process.exit(1);
   }
@@ -205,6 +206,7 @@ async function generateWebsiteInDaytona(
           "node generate.js",
           projectDir,
           {
+            AI_GATEWAY_API_KEY: gatewayApiKey,
             VERCEL_AI_GATEWAY_API_KEY: gatewayApiKey,
             DAYTONA_API_KEY: daytonaApiKey,
             ...(process.env.AI_GATEWAY_MODEL
@@ -266,6 +268,7 @@ async function generateWebsiteInDaytona(
         {
           PORT: "3000",
           DAYTONA_API_KEY: daytonaApiKey,
+          AI_GATEWAY_API_KEY: gatewayApiKey,
           VERCEL_AI_GATEWAY_API_KEY: gatewayApiKey,
           ...(process.env.AI_GATEWAY_MODEL
             ? { AI_GATEWAY_MODEL: process.env.AI_GATEWAY_MODEL }
@@ -347,6 +350,7 @@ async function generateWebsiteInDaytona(
             {
               PORT: "3000",
               DAYTONA_API_KEY: daytonaApiKey,
+              AI_GATEWAY_API_KEY: gatewayApiKey,
               VERCEL_AI_GATEWAY_API_KEY: gatewayApiKey,
               ...(process.env.AI_GATEWAY_MODEL
                 ? { AI_GATEWAY_MODEL: process.env.AI_GATEWAY_MODEL }

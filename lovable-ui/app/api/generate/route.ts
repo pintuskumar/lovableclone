@@ -12,6 +12,10 @@ import { applyRateLimitHeaders, rateLimit } from "@/lib/server/rate-limit";
 
 export async function POST(req: NextRequest) {
   try {
+    const gatewayApiKey =
+      process.env.AI_GATEWAY_API_KEY ||
+      process.env.VERCEL_AI_GATEWAY_API_KEY;
+
     if (!isAllowedOrigin(req)) {
       return new Response(
         JSON.stringify({ error: "Origin not allowed" }),
@@ -81,9 +85,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!process.env.VERCEL_AI_GATEWAY_API_KEY) {
+    if (!gatewayApiKey) {
       return new Response(
-        JSON.stringify({ error: "VERCEL_AI_GATEWAY_API_KEY is not configured" }),
+        JSON.stringify({
+          error: "AI_GATEWAY_API_KEY or VERCEL_AI_GATEWAY_API_KEY is not configured",
+        }),
         { status: 500, headers: { "Content-Type": "application/json" } }
       );
     }

@@ -13,6 +13,10 @@ import { applyRateLimitHeaders, rateLimit } from "@/lib/server/rate-limit";
 
 export async function POST(req: NextRequest) {
   try {
+    const gatewayApiKey =
+      process.env.AI_GATEWAY_API_KEY ||
+      process.env.VERCEL_AI_GATEWAY_API_KEY;
+
     if (!isAllowedOrigin(req)) {
       return new Response(JSON.stringify({ error: "Origin not allowed" }), {
         status: 403,
@@ -84,12 +88,12 @@ export async function POST(req: NextRequest) {
 
     if (
       !process.env.DAYTONA_API_KEY ||
-      !process.env.VERCEL_AI_GATEWAY_API_KEY
+      !gatewayApiKey
     ) {
       return new Response(
         JSON.stringify({
           error:
-            "Missing API keys (DAYTONA_API_KEY or VERCEL_AI_GATEWAY_API_KEY)",
+            "Missing API keys (DAYTONA_API_KEY and AI_GATEWAY_API_KEY or VERCEL_AI_GATEWAY_API_KEY)",
         }),
         { status: 500, headers: { "Content-Type": "application/json" } },
       );
@@ -124,7 +128,8 @@ export async function POST(req: NextRequest) {
             env: {
               ...process.env,
               DAYTONA_API_KEY: process.env.DAYTONA_API_KEY,
-              VERCEL_AI_GATEWAY_API_KEY: process.env.VERCEL_AI_GATEWAY_API_KEY,
+              AI_GATEWAY_API_KEY: gatewayApiKey,
+              VERCEL_AI_GATEWAY_API_KEY: gatewayApiKey,
             },
             cwd: process.cwd(),
           },

@@ -5,10 +5,14 @@ const AI_GATEWAY_MODEL =
     process.env.AI_GATEWAY_MODEL || DEFAULT_AI_GATEWAY_MODEL;
 
 function getAiGatewayApiKey() {
-    const apiKey = process.env.VERCEL_AI_GATEWAY_API_KEY?.trim();
+    const apiKey =
+        process.env.AI_GATEWAY_API_KEY?.trim() ||
+        process.env.VERCEL_AI_GATEWAY_API_KEY?.trim();
 
     if (!apiKey) {
-        throw new Error("VERCEL_AI_GATEWAY_API_KEY must be set");
+        throw new Error(
+            "AI_GATEWAY_API_KEY or VERCEL_AI_GATEWAY_API_KEY must be set"
+        );
     }
 
     return apiKey;

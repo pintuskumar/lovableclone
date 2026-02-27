@@ -5,9 +5,22 @@ const DEFAULT_AI_GATEWAY_MODEL = "anthropic/claude-sonnet-4.5";
 const AI_GATEWAY_MODEL =
   process.env.AI_GATEWAY_MODEL || DEFAULT_AI_GATEWAY_MODEL;
 
+function getAiGatewayApiKey() {
+  const apiKey =
+    process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_AI_GATEWAY_API_KEY;
+
+  if (!apiKey) {
+    throw new Error(
+      "AI_GATEWAY_API_KEY or VERCEL_AI_GATEWAY_API_KEY must be set"
+    );
+  }
+
+  return apiKey;
+}
+
 // Initialize OpenAI client for Vercel AI Gateway (OpenAI-compatible API)
 const aiClient = new OpenAI({
-  apiKey: process.env.VERCEL_AI_GATEWAY_API_KEY,
+  apiKey: getAiGatewayApiKey(),
   baseURL: "https://ai-gateway.vercel.sh/v1",
 });
 
