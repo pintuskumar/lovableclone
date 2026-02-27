@@ -1,20 +1,34 @@
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 
-let jwtSecret = process.env.JWT_SECRET;
-if (!jwtSecret) {
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("JWT_SECRET must be set in production");
-  }
-  jwtSecret = "dev-secret-change-me";
-  if (process.env.NODE_ENV !== "test") {
-    console.warn("Warning: JWT_SECRET is not set. Using a dev-only secret.");
-  }
-}
-
-const JWT_SECRET = jwtSecret;
 const TOKEN_EXPIRY = "7d"; // Token expires in 7 days
 const COOKIE_NAME = "auth_token";
+const DEV_JWT_SECRET = "dev-secret-change-me";
+
+let hasWarnedAboutDevSecret = false;
+
+function getJwtSecret(): string;
+function getJwtSecret(options: { optional: true }): string | null;
+function getJwtSecret(options?: { optional?: boolean }): string | null {
+  const configuredSecret = process.env.JWT_SECRET?.trim();
+  if (configuredSecret) {
+    return configuredSecret;
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    if (options?.optional) {
+      return null;
+    }
+    throw new Error("JWT_SECRET must be set in production");
+  }
+
+  if (!hasWarnedAboutDevSecret && process.env.NODE_ENV !== "test") {
+    hasWarnedAboutDevSecret = true;
+    console.warn("Warning: JWT_SECRET is not set. Using a dev-only secret.");
+  }
+
+  return DEV_JWT_SECRET;
+}
 
 export interface UserPayload {
   id: string;
@@ -31,13 +45,14 @@ export interface DecodedToken extends UserPayload {
  * Generate a JWT token for a user
  */
 export function generateToken(user: UserPayload): string {
+  const jwtSecret = getJwtSecret();
   return jwt.sign(
     {
       id: user.id,
       email: user.email,
       name: user.name,
     },
-    JWT_SECRET,
+    jwtSecret,
     { expiresIn: TOKEN_EXPIRY }
   );
 }
@@ -47,7 +62,12 @@ export function generateToken(user: UserPayload): string {
  */
 export function verifyToken(token: string): DecodedToken | null {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as DecodedToken;
+    const jwtSecret = getJwtSecret({ optional: true });
+    if (!jwtSecret) {
+      return null;
+    }
+
+    const decoded = jwt.verify(token, jwtSecret) as DecodedToken;
     return decoded;
   } catch (error) {
     return null;
