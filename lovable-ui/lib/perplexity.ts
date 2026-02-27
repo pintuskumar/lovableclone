@@ -4,11 +4,24 @@ const DEFAULT_AI_GATEWAY_MODEL = "anthropic/claude-sonnet-4.5";
 const AI_GATEWAY_MODEL =
     process.env.AI_GATEWAY_MODEL || DEFAULT_AI_GATEWAY_MODEL;
 
-// OpenAI SDK configured for the Vercel AI Gateway (OpenAI-compatible API)
-const aiClient = new OpenAI({
-    apiKey: process.env.VERCEL_AI_GATEWAY_API_KEY,
-    baseURL: "https://ai-gateway.vercel.sh/v1",
-});
+function getAiGatewayApiKey() {
+    const apiKey = process.env.VERCEL_AI_GATEWAY_API_KEY?.trim();
+
+    if (!apiKey) {
+        throw new Error("VERCEL_AI_GATEWAY_API_KEY must be set");
+    }
+
+    return apiKey;
+}
+
+// Create the client lazily so route modules can be imported during build
+// even when the runtime secret is not configured in the build environment.
+export function getAiClient() {
+    return new OpenAI({
+        apiKey: getAiGatewayApiKey(),
+        baseURL: "https://ai-gateway.vercel.sh/v1",
+    });
+}
 
 export interface PerplexityMessage {
     role: "system" | "user" | "assistant";
@@ -47,6 +60,7 @@ export async function generateCodeWithPerplexity(
     prompt: string
 ): Promise<CodeGenerationResult> {
     try {
+        const aiClient = getAiClient();
         const messages: PerplexityMessage[] = [
             {
                 role: "system",
@@ -94,6 +108,7 @@ export async function* streamGenerateCodeWithPerplexity(
     prompt: string
 ): AsyncGenerator<{ type: string; content?: string; error?: string }> {
     try {
+        const aiClient = getAiClient();
         const messages: PerplexityMessage[] = [
             {
                 role: "system",
@@ -137,4 +152,4 @@ Important requirements:
 export const generateCode = generateCodeWithPerplexity;
 export const streamGenerateCode = streamGenerateCodeWithPerplexity;
 
-export { aiClient, aiClient as perplexity };
+export { getAiClient as aiClient, getAiClient as perplexity };

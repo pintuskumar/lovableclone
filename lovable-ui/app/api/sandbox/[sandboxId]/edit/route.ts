@@ -1,6 +1,6 @@
 ﻿import path from "path";
 import { NextRequest, NextResponse } from "next/server";
-import { aiClient } from "@/lib/perplexity";
+import { getAiClient } from "@/lib/perplexity";
 import { getAuthUser } from "@/lib/server/auth";
 import {
   MAX_PROMPT_LENGTH,
@@ -388,6 +388,7 @@ async function generateEditsFromModel(
   contextFiles: AIEditFile[],
 ) {
   const model = process.env.AI_GATEWAY_MODEL || DEFAULT_AI_GATEWAY_MODEL;
+  const aiClient = getAiClient();
 
   const aiResponse = await aiClient.chat.completions.create({
     model,
