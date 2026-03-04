@@ -3,5 +3,10 @@
   "framework": "nextjs",
   "installCommand": "npm install",
   "buildCommand": "npm run build",
-  "devCommand": "npm run dev"
+  "devCommand": "npm run dev",
+  "functions": {
+    "app/api/generate-daytona/route.ts": {
+      "includeFiles": "scripts/sandbox-generate.js"
+    }
+  }
 }

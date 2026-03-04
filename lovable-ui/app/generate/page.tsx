@@ -1313,9 +1313,11 @@ function GeneratePageContent() {
         <div className="w-full md:w-[35%] flex flex-col min-h-0 glass-panel ui-ring-frame rounded-2xl overflow-hidden">
           <div className="p-4 border-b border-white/10 space-y-3 ui-divider-bottom">
             <div className="flex items-start justify-between gap-3">
-              <div>
+              <div className="min-w-0 flex-1">
                 <h2 className="text-white font-semibold">Lovable</h2>
-                <p className="text-gray-400 text-sm mt-1 break-words">{activePrompt}</p>
+                <p className="text-gray-400 text-sm mt-1 break-words whitespace-pre-wrap">
+                  {activePrompt}
+                </p>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 <span
@@ -1617,7 +1619,7 @@ function GeneratePageContent() {
               </button>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-2 xl:flex-row xl:items-center">
               <input
                 ref={refineInputRef}
                 type="text"
@@ -1631,57 +1633,59 @@ function GeneratePageContent() {
                 }}
                 placeholder="Add a refinement: better typography, sticky nav, pricing table..."
                 aria-label="Refine prompt"
-                className="flex-1 px-4 py-2 bg-gray-900/70 text-white rounded-xl border border-white/10 focus:outline-none focus:border-white/20 shadow-inner shadow-black/20"
+                className="w-full min-w-0 xl:flex-1 px-4 py-2 bg-gray-900/70 text-white rounded-xl border border-white/10 focus:outline-none focus:border-white/20 shadow-inner shadow-black/20"
                 disabled={generation.isBusy || isPreparingEditPreview || isApplyingEdit}
               />
-              <button
-                type="button"
-                onClick={() => void handleApplyEdit()}
-                className="ui-btn ui-btn-primary px-3 py-2 text-sm"
-                disabled={
-                  generation.isBusy ||
-                  isPreparingEditPreview ||
-                  isApplyingEdit ||
-                  (!refinePrompt.trim() && !activePrompt.trim())
-                }
-                aria-label="Preview refinement edits"
-                title="Preview file edits before applying"
-              >
-                {isPreparingEditPreview
-                  ? "Previewing..."
-                  : isApplyingEdit
-                    ? "Applying..."
-                  : generation.sandboxId
-                    ? "Preview edits"
-                    : "Run"}
-              </button>
-              {pendingEditPlan && (
+              <div className="flex flex-wrap items-center gap-2 xl:flex-nowrap">
                 <button
                   type="button"
-                  onClick={() => setShowEditPreview(true)}
-                  className="ui-btn ui-btn-accent px-3 py-2 text-sm"
-                  disabled={generation.isBusy || isPreparingEditPreview || isApplyingEdit}
-                  aria-label="Open edit preview"
-                  title="Open prepared edit preview"
+                  onClick={() => void handleApplyEdit()}
+                  className="ui-btn ui-btn-primary px-3 py-2 text-sm whitespace-nowrap"
+                  disabled={
+                    generation.isBusy ||
+                    isPreparingEditPreview ||
+                    isApplyingEdit ||
+                    (!refinePrompt.trim() && !activePrompt.trim())
+                  }
+                  aria-label="Preview refinement edits"
+                  title="Preview file edits before applying"
                 >
-                  Review
+                  {isPreparingEditPreview
+                    ? "Previewing..."
+                    : isApplyingEdit
+                      ? "Applying..."
+                    : generation.sandboxId
+                      ? "Preview edits"
+                      : "Run"}
                 </button>
-              )}
-              <button
-                type="button"
-                onClick={() => void handleRefineSubmit()}
-                className="ui-btn ui-btn-ghost px-3 py-2 text-sm"
-                disabled={
-                  generation.isBusy ||
-                  isPreparingEditPreview ||
-                  isApplyingEdit ||
-                  (!refinePrompt.trim() && !activePrompt.trim())
-                }
-                aria-label="Run full regeneration"
-                title="Create a new full generation run"
-              >
-                New run
-              </button>
+                {pendingEditPlan && (
+                  <button
+                    type="button"
+                    onClick={() => setShowEditPreview(true)}
+                    className="ui-btn ui-btn-accent px-3 py-2 text-sm whitespace-nowrap"
+                    disabled={generation.isBusy || isPreparingEditPreview || isApplyingEdit}
+                    aria-label="Open edit preview"
+                    title="Open prepared edit preview"
+                  >
+                    Review
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => void handleRefineSubmit()}
+                  className="ui-btn ui-btn-ghost px-3 py-2 text-sm whitespace-nowrap"
+                  disabled={
+                    generation.isBusy ||
+                    isPreparingEditPreview ||
+                    isApplyingEdit ||
+                    (!refinePrompt.trim() && !activePrompt.trim())
+                  }
+                  aria-label="Run full regeneration"
+                  title="Create a new full generation run"
+                >
+                  New run
+                </button>
+              </div>
             </div>
 
             {editNotice && (

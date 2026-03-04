@@ -1,6 +1,4 @@
 import { NextRequest } from "next/server";
-import { spawn } from "child_process";
-import path from "path";
 import {
   MAX_PROMPT_LENGTH,
   RATE_LIMIT_GENERATE_DAYTONA,
@@ -10,6 +8,9 @@ import {
 import { getAuthUser } from "@/lib/server/auth";
 import { getClientIp, isAllowedOrigin } from "@/lib/server/request";
 import { applyRateLimitHeaders, rateLimit } from "@/lib/server/rate-limit";
+import { generateWebsiteInDaytona } from "@/lib/server/daytona/generate-website";
+
+export const maxDuration = 300;
 
 export async function POST(req: NextRequest) {
   try {
@@ -109,133 +110,30 @@ export async function POST(req: NextRequest) {
     // Start the async generation
     (async () => {
       try {
-        // Use the generate-in-daytona.ts script
-        const scriptPath = path.join(
-          process.cwd(),
-          "scripts",
-          "generate-in-daytona.ts",
-        );
-
-        // On Windows with shell:true, we need to properly quote paths with spaces
-        // Escape any double quotes in the prompt to prevent injection
-        const safePrompt = prompt.replace(/"/g, '\\"').replace(/\r?\n/g, " ");
-
-        const child = spawn(
-          "npx",
-          ["tsx", `"${scriptPath}"`, `"${safePrompt}"`],
-          {
-            shell: true,
-            env: {
-              ...process.env,
-              DAYTONA_API_KEY: process.env.DAYTONA_API_KEY,
-              AI_GATEWAY_API_KEY: gatewayApiKey,
-              VERCEL_AI_GATEWAY_API_KEY: gatewayApiKey,
-            },
-            cwd: process.cwd(),
-          },
-        );
-
         let sandboxId = "";
-        let previewUrl = "";
-        let buffer = "";
+        const generationResult = await generateWebsiteInDaytona({
+          prompt,
+          onProgress: async (message) => {
+            const text = message.trim();
+            if (!text) return;
 
-        // Capture stdout
-        child.stdout.on("data", async (data) => {
-          buffer += data.toString();
-          const lines = buffer.split("\n");
-          buffer = lines.pop() || ""; // Keep incomplete line in buffer
-
-          for (const line of lines) {
-            if (!line.trim()) continue;
-
-            // Parse AI messages
-            if (line.includes("__AI_MESSAGE__")) {
-              const jsonStart =
-                line.indexOf("__AI_MESSAGE__") + "__AI_MESSAGE__".length;
-              try {
-                const message = JSON.parse(line.substring(jsonStart).trim());
-                await writer.write(
-                  encoder.encode(
-                    `data: ${JSON.stringify({
-                      type: "ai_message",
-                      content: message.content,
-                    })}\n\n`,
-                  ),
-                );
-              } catch (e) {
-                // Ignore parse errors
-              }
+            const sandboxMatch = text.match(/Sandbox created: ([a-f0-9-]+)/i);
+            if (sandboxMatch?.[1]) {
+              sandboxId = sandboxMatch[1];
             }
-            // Regular progress messages
-            else {
-              const output = line.trim();
 
-              // Filter out internal logs
-              if (
-                output &&
-                !output.includes("[AI]:") &&
-                !output.includes("__")
-              ) {
-                // Send as progress
-                await writer.write(
-                  encoder.encode(
-                    `data: ${JSON.stringify({
-                      type: "progress",
-                      message: output,
-                    })}\n\n`,
-                  ),
-                );
-
-                // Extract sandbox ID
-                const sandboxMatch = output.match(
-                  /Sandbox created: ([a-f0-9-]+)/,
-                );
-                if (sandboxMatch) {
-                  sandboxId = sandboxMatch[1];
-                }
-
-                // Extract preview URL
-                const previewMatch = output.match(
-                  /Preview URL: (https:\/\/[^\s]+)/,
-                );
-                if (previewMatch) {
-                  previewUrl = previewMatch[1];
-                }
-              }
-            }
-          }
-        });
-
-        // Capture stderr
-        child.stderr.on("data", async (data) => {
-          const error = data.toString();
-          console.error("[Daytona Error]:", error);
-
-          // Only send actual errors, not debug info
-          if (error.includes("Error") || error.includes("Failed")) {
             await writer.write(
               encoder.encode(
                 `data: ${JSON.stringify({
-                  type: "error",
-                  message: error.trim(),
+                  type: "progress",
+                  message: text,
                 })}\n\n`,
               ),
             );
-          }
+          },
         });
-
-        // Wait for process to complete
-        await new Promise((resolve, reject) => {
-          child.on("exit", (code) => {
-            if (code === 0) {
-              resolve(code);
-            } else {
-              reject(new Error(`Process exited with code ${code}`));
-            }
-          });
-
-          child.on("error", reject);
-        });
+        const previewUrl = generationResult.previewUrl;
+        sandboxId = generationResult.sandboxId || sandboxId;
 
         // Send completion with preview URL
         if (previewUrl) {
