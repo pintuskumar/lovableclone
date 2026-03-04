@@ -5,6 +5,7 @@
 :root {
   --foreground-rgb: 242, 243, 247;
   --background-rgb: 5, 5, 8;
+  --site-navbar-height: 84px;
   --surface-1: rgba(17, 17, 22, 0.9);
   --surface-2: rgba(24, 24, 31, 0.9);
   --surface-3: rgba(34, 34, 44, 0.9);

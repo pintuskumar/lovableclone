@@ -1302,7 +1302,7 @@ function GeneratePageContent() {
   return (
     <main className="h-screen bg-black flex flex-col overflow-hidden relative">
       <Navbar />
-      <div className="h-16" />
+      <div className="h-[var(--site-navbar-height,84px)] shrink-0" aria-hidden="true" />
 
       <div className="sr-only" aria-live="polite">
         Status: {stageLabel}

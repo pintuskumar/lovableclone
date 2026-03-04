@@ -14,6 +14,7 @@ export default function Navbar() {
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const mobileMenuRef = useRef<HTMLDivElement | null>(null);
   const mobileMenuButtonRef = useRef<HTMLButtonElement | null>(null);
+  const navRef = useRef<HTMLElement | null>(null);
 
   const navLinks = [
     { href: "/", label: "Home" },
@@ -81,8 +82,41 @@ export default function Navbar() {
     };
   }, [showMobileMenu, showUserMenu]);
 
+  useEffect(() => {
+    const navElement = navRef.current;
+    if (!navElement) return;
+
+    const root = document.documentElement;
+    const setNavbarHeight = () => {
+      const nextHeight = Math.ceil(navElement.getBoundingClientRect().height);
+      root.style.setProperty("--site-navbar-height", `${nextHeight}px`);
+    };
+
+    setNavbarHeight();
+
+    const resizeObserver =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(() => setNavbarHeight())
+        : null;
+
+    if (resizeObserver) {
+      resizeObserver.observe(navElement);
+    }
+
+    window.addEventListener("resize", setNavbarHeight);
+
+    return () => {
+      window.removeEventListener("resize", setNavbarHeight);
+      resizeObserver?.disconnect();
+    };
+  }, [pathname, isLoading, isAuthenticated, showMobileMenu, showUserMenu]);
+
   return (
-    <nav className="absolute top-0 left-0 right-0 z-30 px-4 pt-4" aria-label="Primary">
+    <nav
+      ref={navRef}
+      className="absolute top-0 left-0 right-0 z-30 px-4 pt-4"
+      aria-label="Primary"
+    >
       <div className="mx-auto max-w-7xl">
         <div className="glass-panel ui-ring-frame rounded-2xl px-4 sm:px-5 py-3">
           <div className="flex items-center justify-between gap-3">
