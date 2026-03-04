@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
         });
         const previewUrl = generationResult.previewUrl;
         sandboxId = generationResult.sandboxId || sandboxId;
-        const usePreviewProxy = process.env.DAYTONA_PREVIEW_PROXY === "1";
+        const usePreviewProxy = process.env.DAYTONA_PREVIEW_PROXY !== "0";
         const clientPreviewUrl =
           usePreviewProxy && sandboxId ? `/preview/${sandboxId}` : previewUrl;
 

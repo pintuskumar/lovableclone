@@ -26,6 +26,13 @@ function resolvePreviewUrl(baseUrl: string, pathSegments: string[] | undefined, 
   return upstream;
 }
 
+function rewriteHtmlForPreviewProxy(html: string, upstreamOrigin: string) {
+  return html.replace(
+    /(["'])\/_next\//g,
+    `$1${upstreamOrigin}/_next/`,
+  );
+}
+
 function rewriteRedirectLocation(
   sandboxId: string,
   upstreamBaseUrl: string,
@@ -182,6 +189,19 @@ async function proxyPreviewRequest(
   );
   if (rewrittenLocation) {
     responseHeaders.set("location", rewrittenLocation);
+  }
+
+  const contentType = upstreamResponse.headers.get("content-type") || "";
+  if (contentType.includes("text/html")) {
+    const upstreamOrigin = new URL(previewTarget.url).origin;
+    const html = await upstreamResponse.text();
+    const rewrittenHtml = rewriteHtmlForPreviewProxy(html, upstreamOrigin);
+
+    return new Response(rewrittenHtml, {
+      status: upstreamResponse.status,
+      statusText: upstreamResponse.statusText,
+      headers: responseHeaders,
+    });
   }
 
   return new Response(upstreamResponse.body, {
