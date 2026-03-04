@@ -3,7 +3,6 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import Navbar from "@/components/Navbar";
 import FileExplorer, { FileNode } from "@/components/FileExplorer";
 import { FileTab, getLanguageFromPath } from "@/components/CodeEditor";
 import {
@@ -46,13 +45,6 @@ const CodeEditor = dynamic(() => import("@/components/CodeEditor"), {
 });
 
 type ViewMode = "preview" | "code";
-
-const REFINE_SUGGESTIONS = [
-  "Make the design feel more premium with stronger hierarchy and whitespace.",
-  "Add smooth section reveal animations and hover interactions.",
-  "Improve mobile navigation and make CTA buttons more prominent.",
-  "Add trust sections: testimonials, logos, and FAQ.",
-];
 
 const STAGE_ORDER: GenerationStage[] = [
   "queued",
@@ -229,7 +221,6 @@ function GeneratePageContent() {
   const [selectedQuickOpenPath, setSelectedQuickOpenPath] = useState<string | null>(
     null,
   );
-  const [runHistory, setRunHistory] = useState<string[]>([]);
   const [checkpoints, setCheckpoints] = useState<SandboxCheckpoint[]>([]);
   const [lastApplyCheckpointId, setLastApplyCheckpointId] = useState<string | null>(
     null,
@@ -305,7 +296,6 @@ function GeneratePageContent() {
     if (hasStartedRef.current) return;
     hasStartedRef.current = true;
     setActivePrompt(initialPrompt);
-    setRunHistory([initialPrompt]);
 
     resetWorkspaceState();
     void generation.start(initialPrompt);
@@ -737,7 +727,6 @@ function GeneratePageContent() {
     setRefinePrompt("");
     setPendingEditPlan(null);
     setShowEditPreview(false);
-    setRunHistory((prev) => [trimmed, ...prev.filter((item) => item !== trimmed)].slice(0, 6));
     setShowQuickActions(false);
     resetWorkspaceState();
     await generation.start(trimmed);
@@ -1143,12 +1132,6 @@ function GeneratePageContent() {
         : 0;
 
       setRefinePrompt("");
-      setRunHistory((prev) =>
-        [pendingEditPlan.instruction, ...prev.filter((entry) => entry !== pendingEditPlan.instruction)].slice(
-          0,
-          6,
-        ),
-      );
 
       setOpenTabs([]);
       setActiveFile(null);
@@ -1301,9 +1284,6 @@ function GeneratePageContent() {
 
   return (
     <main className="h-screen bg-black flex flex-col overflow-hidden relative">
-      <Navbar />
-      <div className="h-[var(--site-navbar-height,84px)] shrink-0" aria-hidden="true" />
-
       <div className="sr-only" aria-live="polite">
         Status: {stageLabel}
         {generation.error ? `. Error: ${generation.error}` : ""}
@@ -1708,49 +1688,6 @@ function GeneratePageContent() {
                 >
                   Open
                 </button>
-              </div>
-            )}
-
-            <div className="flex flex-wrap gap-2">
-              {REFINE_SUGGESTIONS.map((suggestion) => (
-                <button
-                  key={suggestion}
-                  type="button"
-                  onClick={() => setRefinePrompt(suggestion)}
-                  className="ui-chip px-2 py-1 text-[11px] text-left"
-                  disabled={
-                    generation.isBusy || isPreparingEditPreview || isApplyingEdit
-                  }
-                >
-                  {suggestion}
-                </button>
-              ))}
-            </div>
-
-            {runHistory.length > 0 && (
-              <div className="space-y-2">
-                <div className="text-[11px] uppercase tracking-wider text-gray-500">
-                  Recent prompts
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {runHistory.map((entry) => (
-                    <button
-                      key={entry}
-                      type="button"
-                      onClick={() => {
-                        setRefinePrompt(entry);
-                        refineInputRef.current?.focus();
-                      }}
-                      className="ui-chip px-2 py-1 text-[11px] max-w-full truncate"
-                      title={entry}
-                      disabled={
-                        generation.isBusy || isPreparingEditPreview || isApplyingEdit
-                      }
-                    >
-                      {entry}
-                    </button>
-                  ))}
-                </div>
               </div>
             )}
           </div>

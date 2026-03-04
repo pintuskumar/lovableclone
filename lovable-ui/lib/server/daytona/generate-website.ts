@@ -11,6 +11,7 @@ interface GenerateWebsiteOptions {
 interface GenerateWebsiteResult {
   sandboxId: string;
   previewUrl: string;
+  previewToken?: string | null;
 }
 
 interface ProcessResult {
@@ -281,10 +282,20 @@ export async function generateWebsiteInDaytona({
 
   await emitProgress(onProgress, "Getting preview URL...");
   const preview = await sandbox.getPreviewLink(3000);
-  await emitProgress(onProgress, `Preview URL: ${preview.url}`);
+  const preferredPreviewUrl =
+    typeof preview.legacyProxyUrl === "string" && preview.legacyProxyUrl.trim()
+      ? preview.legacyProxyUrl.trim()
+      : preview.url;
+  const previewToken =
+    typeof preview.token === "string" && preview.token.trim()
+      ? preview.token.trim()
+      : null;
+
+  await emitProgress(onProgress, `Preview URL: ${preferredPreviewUrl}`);
 
   return {
     sandboxId,
-    previewUrl: preview.url,
+    previewUrl: preferredPreviewUrl,
+    previewToken,
   };
 }
