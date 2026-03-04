@@ -1,4 +1,4 @@
-import path from "path";
+﻿import path from "path";
 import { NextRequest, NextResponse } from "next/server";
 import { getAiClient } from "@/lib/perplexity";
 import { getAuthUser } from "@/lib/server/auth";
@@ -471,9 +471,9 @@ export async function POST(
     return jsonError("Authentication required", 401);
   }
 
-  if (!process.env.DAYTONA_API_KEY || !process.env.AI_GATEWAY_API_KEY) {
+  if (!process.env.DAYTONA_API_KEY || !process.env.VERCEL_AI_GATEWAY_API_KEY) {
     return jsonError(
-      "Missing API keys (DAYTONA_API_KEY or AI_GATEWAY_API_KEY)",
+      "Missing API keys (DAYTONA_API_KEY or VERCEL_AI_GATEWAY_API_KEY)",
       500,
     );
   }
