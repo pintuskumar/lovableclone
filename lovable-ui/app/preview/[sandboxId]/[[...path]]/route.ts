@@ -62,7 +62,8 @@ function createUpstreamHeaders(req: NextRequest, token: string | null) {
       lower === "te" ||
       lower === "trailers" ||
       lower === "transfer-encoding" ||
-      lower === "upgrade"
+      lower === "upgrade" ||
+      lower === "accept-encoding"
     ) {
       return;
     }
@@ -163,7 +164,9 @@ async function proxyPreviewRequest(
       lower === "te" ||
       lower === "trailers" ||
       lower === "transfer-encoding" ||
-      lower === "upgrade"
+      lower === "upgrade" ||
+      lower === "content-length" ||
+      lower === "content-encoding"
     ) {
       return;
     }

@@ -45,6 +45,7 @@ const CodeEditor = dynamic(() => import("@/components/CodeEditor"), {
 });
 
 type ViewMode = "preview" | "code";
+const PREVIEW_LOAD_TIMEOUT_MS = 30_000;
 
 const STAGE_ORDER: GenerationStage[] = [
   "queued",
@@ -309,6 +310,20 @@ function GeneratePageContent() {
       setPreviewFrameKey((prev) => prev + 1);
     }
   }, [generation.previewUrl]);
+
+  useEffect(() => {
+    if (!generation.previewUrl || !isPreviewLoading) return;
+
+    const timeoutId = window.setTimeout(() => {
+      setIsPreviewLoading(false);
+      setPreviewLoadError((prev) => {
+        if (prev) return prev;
+        return "Preview is taking longer than expected. Try Reload preview.";
+      });
+    }, PREVIEW_LOAD_TIMEOUT_MS);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [generation.previewUrl, isPreviewLoading, previewFrameKey]);
 
   useEffect(() => {
     if (generation.sandboxId !== lastSandboxIdRef.current) {
