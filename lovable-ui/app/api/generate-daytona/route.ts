@@ -134,6 +134,7 @@ export async function POST(req: NextRequest) {
         });
         const previewUrl = generationResult.previewUrl;
         sandboxId = generationResult.sandboxId || sandboxId;
+        const clientPreviewUrl = sandboxId ? `/preview/${sandboxId}` : previewUrl;
 
         // Send completion with preview URL
         if (previewUrl) {
@@ -142,7 +143,7 @@ export async function POST(req: NextRequest) {
               `data: ${JSON.stringify({
                 type: "complete",
                 sandboxId,
-                previewUrl,
+                previewUrl: clientPreviewUrl,
               })}\n\n`,
             ),
           );
