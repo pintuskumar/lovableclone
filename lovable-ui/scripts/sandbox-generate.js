@@ -4,6 +4,18 @@ const fs = require("fs");
 const DEFAULT_AI_GATEWAY_MODEL = "anthropic/claude-sonnet-4.5";
 const AI_GATEWAY_MODEL =
   process.env.AI_GATEWAY_MODEL || DEFAULT_AI_GATEWAY_MODEL;
+const AI_GATEWAY_FALLBACK_MODELS = (process.env.AI_GATEWAY_FALLBACK_MODELS || "")
+  .split(",")
+  .map((item) => item.trim())
+  .filter(Boolean);
+const AI_GATEWAY_GENERATION_RETRIES = Math.max(
+  1,
+  Number.parseInt(process.env.AI_GATEWAY_GENERATION_RETRIES || "3", 10),
+);
+const AI_GATEWAY_RETRY_BASE_DELAY_MS = Math.max(
+  500,
+  Number.parseInt(process.env.AI_GATEWAY_RETRY_BASE_DELAY_MS || "2000", 10),
+);
 
 function getAiGatewayApiKey() {
   const apiKey =
@@ -23,6 +35,106 @@ const aiClient = new OpenAI({
   apiKey: getAiGatewayApiKey(),
   baseURL: "https://ai-gateway.vercel.sh/v1",
 });
+
+function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+function extractErrorMessage(error) {
+  if (!error) return "Unknown error";
+  if (typeof error.message === "string" && error.message.trim()) {
+    return error.message.trim();
+  }
+  return String(error);
+}
+
+function extractErrorStatus(error) {
+  const status =
+    error?.status || error?.statusCode || error?.response?.status || null;
+  return typeof status === "number" ? status : null;
+}
+
+function isRetryableGatewayError(error) {
+  const message = extractErrorMessage(error).toLowerCase();
+  const status = extractErrorStatus(error);
+
+  if (status === 429 || (status !== null && status >= 500)) {
+    return true;
+  }
+
+  return (
+    message.includes("connection error") ||
+    message.includes("network error") ||
+    message.includes("timeout") ||
+    message.includes("timed out") ||
+    message.includes("fetch failed") ||
+    message.includes("econnreset") ||
+    message.includes("etimedout") ||
+    message.includes("eai_again") ||
+    message.includes("enotfound") ||
+    message.includes("socket hang up") ||
+    message.includes("rate limit")
+  );
+}
+
+function isModelConfigurationError(error) {
+  const message = extractErrorMessage(error).toLowerCase();
+  const status = extractErrorStatus(error);
+
+  if (status === 400 || status === 401 || status === 403 || status === 404) {
+    return true;
+  }
+
+  return (
+    message.includes("model") &&
+    (message.includes("not found") ||
+      message.includes("not available") ||
+      message.includes("unsupported") ||
+      message.includes("invalid") ||
+      message.includes("permission"))
+  );
+}
+
+async function createCompletionWithRetries({ messages, model }) {
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= AI_GATEWAY_GENERATION_RETRIES; attempt += 1) {
+    try {
+      if (attempt > 1) {
+        console.log(
+          `Retrying AI generation with ${model} (attempt ${attempt}/${AI_GATEWAY_GENERATION_RETRIES})...`,
+        );
+      }
+
+      const response = await aiClient.chat.completions.create({
+        model,
+        messages,
+        temperature: 0.2,
+        max_tokens: 8192,
+      });
+      return response;
+    } catch (error) {
+      lastError = error;
+      const retryable = isRetryableGatewayError(error);
+
+      if (!retryable || attempt === AI_GATEWAY_GENERATION_RETRIES) {
+        throw error;
+      }
+
+      const delayMs = AI_GATEWAY_RETRY_BASE_DELAY_MS * 2 ** (attempt - 1);
+      console.log(
+        `AI request failed (${extractErrorMessage(error)}). Retrying in ${Math.round(
+          delayMs / 1000,
+        )}s...`,
+      );
+      await sleep(delayMs);
+    }
+  }
+
+  throw lastError || new Error("AI generation failed");
+}
 
 // Essential files that must exist for a Next.js project to work
 const ESSENTIAL_FILES = {
@@ -197,12 +309,10 @@ async function generateWebsite() {
   console.log("Prompt:", prompt);
 
   try {
-    const response = await aiClient.chat.completions.create({
-      model: AI_GATEWAY_MODEL,
-      messages: [
-        {
-          role: "system",
-          content: `You are an expert web developer. Generate complete, production-ready code for the requested website.
+    const messages = [
+      {
+        role: "system",
+        content: `You are an expert web developer. Generate complete, production-ready code for the requested website.
 
 CRITICAL FORMATTING: Format each file with a clear path indicator EXACTLY like this:
 **path/to/file.tsx**
@@ -248,15 +358,52 @@ OPTIONAL FILES (only if needed):
 IMPORTANT:
 - The layout.tsx should be self-contained. Do NOT import Header or Footer components unless you also provide their complete implementation files.
 - EVERY navigation link MUST have a corresponding page file.`,
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      temperature: 0.2,
-      max_tokens: 8192,
-    });
+      },
+      {
+        role: "user",
+        content: prompt,
+      },
+    ];
+
+    const modelCandidates = [AI_GATEWAY_MODEL, ...AI_GATEWAY_FALLBACK_MODELS]
+      .map((model) => model.trim())
+      .filter(Boolean)
+      .filter((model, index, arr) => arr.indexOf(model) === index);
+
+    let response = null;
+    let lastModelError = null;
+    let selectedModel = AI_GATEWAY_MODEL;
+
+    for (const model of modelCandidates) {
+      try {
+        if (model !== AI_GATEWAY_MODEL) {
+          console.log(`Trying fallback model: ${model}`);
+        }
+        response = await createCompletionWithRetries({ messages, model });
+        selectedModel = model;
+        break;
+      } catch (error) {
+        lastModelError = error;
+        const configError = isModelConfigurationError(error);
+        if (!configError && model === modelCandidates[modelCandidates.length - 1]) {
+          throw error;
+        }
+        if (!configError) {
+          throw error;
+        }
+        console.log(
+          `Model ${model} unavailable (${extractErrorMessage(error)}), trying next model...`,
+        );
+      }
+    }
+
+    if (!response) {
+      throw lastModelError || new Error("AI generation failed");
+    }
+
+    if (selectedModel !== AI_GATEWAY_MODEL) {
+      console.log(`AI generation completed with fallback model: ${selectedModel}`);
+    }
 
     const content = response.choices[0]?.message?.content || "";
     console.log("AI Response received, length:", content.length);

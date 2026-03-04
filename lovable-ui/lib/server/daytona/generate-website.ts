@@ -53,8 +53,16 @@ function isRetryableError(error: unknown) {
     lower.includes("504") ||
     lower.includes("502") ||
     lower.includes("503") ||
+    lower.includes("429") ||
     lower.includes("gateway") ||
     lower.includes("timeout") ||
+    lower.includes("timed out") ||
+    lower.includes("connection error") ||
+    lower.includes("network error") ||
+    lower.includes("fetch failed") ||
+    lower.includes("socket hang up") ||
+    lower.includes("eai_again") ||
+    lower.includes("enotfound") ||
     lower.includes("etimedout") ||
     lower.includes("econnreset")
   );
@@ -211,6 +219,15 @@ export async function generateWebsiteInDaytona({
           ...(process.env.AI_GATEWAY_MODEL
             ? { AI_GATEWAY_MODEL: process.env.AI_GATEWAY_MODEL }
             : {}),
+          ...(process.env.AI_GATEWAY_FALLBACK_MODELS
+            ? { AI_GATEWAY_FALLBACK_MODELS: process.env.AI_GATEWAY_FALLBACK_MODELS }
+            : {}),
+          ...(process.env.AI_GATEWAY_GENERATION_RETRIES
+            ? { AI_GATEWAY_GENERATION_RETRIES: process.env.AI_GATEWAY_GENERATION_RETRIES }
+            : {}),
+          ...(process.env.AI_GATEWAY_RETRY_BASE_DELAY_MS
+            ? { AI_GATEWAY_RETRY_BASE_DELAY_MS: process.env.AI_GATEWAY_RETRY_BASE_DELAY_MS }
+            : {}),
           USER_PROMPT: prompt,
           NODE_PATH: `${projectDir}/node_modules`,
         },
@@ -218,7 +235,7 @@ export async function generateWebsiteInDaytona({
       ),
     "Run Vercel AI Gateway generation",
     onProgress,
-    2,
+    3,
     5000,
   );
 
