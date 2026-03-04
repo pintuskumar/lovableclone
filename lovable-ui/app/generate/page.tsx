@@ -46,6 +46,7 @@ const CodeEditor = dynamic(() => import("@/components/CodeEditor"), {
 
 type ViewMode = "preview" | "code";
 const PREVIEW_LOAD_TIMEOUT_MS = 30_000;
+const SANDBOX_FILES_REQUEST_TIMEOUT_MS = 20_000;
 
 const STAGE_ORDER: GenerationStage[] = [
   "queued",
@@ -483,16 +484,30 @@ function GeneratePageContent() {
 
     setIsLoadingFiles(true);
     try {
-      const response = await fetch(
-        `/api/sandbox/${generation.sandboxId}/files?list=1&depth=0`,
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(
+        () => controller.abort(),
+        SANDBOX_FILES_REQUEST_TIMEOUT_MS,
       );
+      let response: Response;
+      try {
+        response = await fetch(
+          `/api/sandbox/${generation.sandboxId}/files?list=1&depth=0`,
+          { signal: controller.signal },
+        );
+      } finally {
+        window.clearTimeout(timeoutId);
+      }
       if (!response.ok) {
         throw new Error("Failed to load files");
       }
       const data = await response.json();
       setFiles(data.files || []);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error loading files:", err);
+      if (err?.name === "AbortError") {
+        setEditNotice("Loading files timed out. Try Reconnect.");
+      }
     } finally {
       setIsLoadingFiles(false);
     }
@@ -502,16 +517,30 @@ function GeneratePageContent() {
     if (!generation.sandboxId) return;
 
     try {
-      const response = await fetch(
-        `/api/sandbox/${generation.sandboxId}/files?list=1&depth=0&path=${encodeURIComponent(path)}`,
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(
+        () => controller.abort(),
+        SANDBOX_FILES_REQUEST_TIMEOUT_MS,
       );
+      let response: Response;
+      try {
+        response = await fetch(
+          `/api/sandbox/${generation.sandboxId}/files?list=1&depth=0&path=${encodeURIComponent(path)}`,
+          { signal: controller.signal },
+        );
+      } finally {
+        window.clearTimeout(timeoutId);
+      }
       if (!response.ok) {
         throw new Error("Failed to load folder");
       }
       const data = await response.json();
       setFiles((prev) => updateFolderChildren(prev, path, data.files || []));
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error loading folder:", err);
+      if (err?.name === "AbortError") {
+        setEditNotice("Loading folder timed out. Try again.");
+      }
     }
   };
 
@@ -525,9 +554,20 @@ function GeneratePageContent() {
     }
 
     try {
-      const response = await fetch(
-        `/api/sandbox/${generation.sandboxId}/files?path=${encodeURIComponent(path)}`,
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(
+        () => controller.abort(),
+        SANDBOX_FILES_REQUEST_TIMEOUT_MS,
       );
+      let response: Response;
+      try {
+        response = await fetch(
+          `/api/sandbox/${generation.sandboxId}/files?path=${encodeURIComponent(path)}`,
+          { signal: controller.signal },
+        );
+      } finally {
+        window.clearTimeout(timeoutId);
+      }
       if (!response.ok) {
         throw new Error("Failed to load file");
       }
@@ -540,8 +580,11 @@ function GeneratePageContent() {
       };
       setOpenTabs((prev) => [...prev, newTab]);
       setActiveFile(path);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error loading file:", err);
+      if (err?.name === "AbortError") {
+        setEditNotice("Loading file timed out. Try again.");
+      }
     }
   };
 
@@ -617,9 +660,20 @@ function GeneratePageContent() {
     setIsLoadingQuickOpen(true);
 
     try {
-      const response = await fetch(
-        `/api/sandbox/${generation.sandboxId}/files?list=1&depth=8`,
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(
+        () => controller.abort(),
+        SANDBOX_FILES_REQUEST_TIMEOUT_MS,
       );
+      let response: Response;
+      try {
+        response = await fetch(
+          `/api/sandbox/${generation.sandboxId}/files?list=1&depth=8`,
+          { signal: controller.signal },
+        );
+      } finally {
+        window.clearTimeout(timeoutId);
+      }
       if (!response.ok) {
         throw new Error("Failed to load project files");
       }
@@ -633,7 +687,11 @@ function GeneratePageContent() {
       setSelectedQuickOpenPath(allPaths[0] || null);
     } catch (error: any) {
       console.error("Failed to open file switcher:", error);
-      setEditNotice(error?.message || "Failed to load project files");
+      if (error?.name === "AbortError") {
+        setEditNotice("Loading files timed out. Try again.");
+      } else {
+        setEditNotice(error?.message || "Failed to load project files");
+      }
       setShowQuickOpen(false);
     } finally {
       setIsLoadingQuickOpen(false);
