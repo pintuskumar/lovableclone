@@ -26,11 +26,54 @@ function resolvePreviewUrl(baseUrl: string, pathSegments: string[] | undefined, 
   return upstream;
 }
 
-function rewriteHtmlForPreviewProxy(html: string, upstreamOrigin: string) {
-  return html.replace(
-    /(["'])\/_next\//g,
-    `$1${upstreamOrigin}/_next/`,
+function toPreviewPath(sandboxId: string, pathValue: string) {
+  const normalized = pathValue.replace(/^\/+/, "");
+  return normalized ? `/preview/${sandboxId}/${normalized}` : `/preview/${sandboxId}/`;
+}
+
+function rewriteSrcsetValue(value: string, sandboxId: string) {
+  return value
+    .split(",")
+    .map((entry) => {
+      const trimmed = entry.trim();
+      if (!trimmed) return entry;
+
+      const [urlPart, ...rest] = trimmed.split(/\s+/);
+      if (
+        !urlPart ||
+        !urlPart.startsWith("/") ||
+        urlPart.startsWith("//") ||
+        urlPart.startsWith("/preview/")
+      ) {
+        return entry;
+      }
+
+      const rewrittenUrl = toPreviewPath(sandboxId, urlPart);
+      return [rewrittenUrl, ...rest].join(" ");
+    })
+    .join(", ");
+}
+
+function rewriteHtmlForPreviewProxy(html: string, sandboxId: string) {
+  let rewritten = html.replace(
+    /\b(src|href|action|poster)=(["'])\/(?!\/|preview\/)([^"']*)\2/gi,
+    (_match, attr: string, quote: string, pathValue: string) =>
+      `${attr}=${quote}${toPreviewPath(sandboxId, pathValue)}${quote}`,
   );
+
+  rewritten = rewritten.replace(
+    /\bsrcset=(["'])([^"']+)\1/gi,
+    (_match, quote: string, value: string) =>
+      `srcset=${quote}${rewriteSrcsetValue(value, sandboxId)}${quote}`,
+  );
+
+  rewritten = rewritten.replace(
+    /url\(\s*(["']?)\/(?!\/|preview\/)([^)"']*)\1\s*\)/gi,
+    (_match, quote: string, pathValue: string) =>
+      `url(${quote}${toPreviewPath(sandboxId, pathValue)}${quote})`,
+  );
+
+  return rewritten;
 }
 
 function rewriteRedirectLocation(
@@ -78,6 +121,7 @@ function createUpstreamHeaders(req: NextRequest, token: string | null) {
     headers.set(key, value);
   });
 
+  headers.set("accept-encoding", "identity");
   headers.set("X-Daytona-Skip-Preview-Warning", "true");
   if (token) {
     headers.set("X-Daytona-Preview-Token", token);
@@ -193,9 +237,8 @@ async function proxyPreviewRequest(
 
   const contentType = upstreamResponse.headers.get("content-type") || "";
   if (contentType.includes("text/html")) {
-    const upstreamOrigin = new URL(previewTarget.url).origin;
     const html = await upstreamResponse.text();
-    const rewrittenHtml = rewriteHtmlForPreviewProxy(html, upstreamOrigin);
+    const rewrittenHtml = rewriteHtmlForPreviewProxy(html, sandboxId);
 
     return new Response(rewrittenHtml, {
       status: upstreamResponse.status,

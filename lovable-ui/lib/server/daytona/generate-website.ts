@@ -68,6 +68,66 @@ function isRetryableError(error: unknown) {
   );
 }
 
+function isDiskLimitError(error: unknown) {
+  const message =
+    error instanceof Error ? error.message : String(error ?? "Unknown error");
+  const lower = message.toLowerCase();
+  return (
+    lower.includes("disk limit exceeded") ||
+    lower.includes("total disk limit exceeded") ||
+    (lower.includes("maximum allowed") && lower.includes("gib"))
+  );
+}
+
+function getSandboxTimestamp(sandbox: any) {
+  const raw =
+    sandbox?.updatedAt ||
+    sandbox?.createdAt ||
+    sandbox?.backupCreatedAt ||
+    null;
+  if (!raw) return 0;
+  const ms = new Date(raw).getTime();
+  return Number.isFinite(ms) ? ms : 0;
+}
+
+async function cleanupOldSandboxes(
+  daytona: any,
+  onProgress: ProgressCallback | undefined,
+  keepMostRecent = 2,
+) {
+  const sandboxes = await daytona.list();
+  const candidates = sandboxes
+    .filter((sandbox: any) => {
+      const state = String(sandbox?.state || "").toLowerCase();
+      return state === "stopped" || state === "archived";
+    })
+    .sort((a: any, b: any) => getSandboxTimestamp(a) - getSandboxTimestamp(b));
+
+  const deletableCount = Math.max(0, candidates.length - keepMostRecent);
+  const toDelete = candidates.slice(0, deletableCount);
+  let deleted = 0;
+
+  for (const sandbox of toDelete) {
+    try {
+      await daytona.delete(sandbox);
+      deleted += 1;
+      await emitProgress(
+        onProgress,
+        `Cleaned sandbox ${sandbox.id} (${deleted}/${toDelete.length})`,
+      );
+    } catch (error: any) {
+      await emitProgress(
+        onProgress,
+        `Skipped sandbox ${sandbox?.id || "unknown"}: ${
+          error?.message || "delete failed"
+        }`,
+      );
+    }
+  }
+
+  return { deleted, candidates: candidates.length };
+}
+
 async function withRetry<T>(
   operation: () => Promise<T>,
   operationName: string,
@@ -141,15 +201,47 @@ export async function generateWebsiteInDaytona({
   const { Daytona } = await import("@daytonaio/sdk");
   const daytona = new Daytona({ apiKey: daytonaApiKey });
 
-  const sandbox = await withRetry(
-    () =>
-      daytona.create({
-        public: true,
-        image: "node:20",
-      }),
-    "Create sandbox",
-    onProgress,
-  );
+  let sandbox: any;
+  try {
+    sandbox = await withRetry(
+      () =>
+        daytona.create({
+          public: true,
+          image: "node:20",
+        }),
+      "Create sandbox",
+      onProgress,
+    );
+  } catch (error) {
+    if (!isDiskLimitError(error)) {
+      throw error;
+    }
+
+    await emitProgress(
+      onProgress,
+      "Daytona disk quota reached. Cleaning up old stopped/archived sandboxes...",
+    );
+    const cleanup = await cleanupOldSandboxes(daytona, onProgress, 2);
+    if (cleanup.deleted <= 0) {
+      throw error;
+    }
+
+    await emitProgress(
+      onProgress,
+      `Cleanup finished (deleted ${cleanup.deleted}). Retrying sandbox creation...`,
+    );
+    sandbox = await withRetry(
+      () =>
+        daytona.create({
+          public: true,
+          image: "node:20",
+        }),
+      "Create sandbox after cleanup",
+      onProgress,
+      2,
+      4000,
+    );
+  }
 
   const sandboxId = sandbox.id;
   await emitProgress(onProgress, `Sandbox created: ${sandboxId}`);
